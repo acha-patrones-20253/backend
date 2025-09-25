@@ -9,8 +9,6 @@ export const google = new Elysia({
   .get("qr-code", ({ request }) => {
     const serviceAccount = getServiceAccount()
 
-    console.log(getServiceAccount())
-
     const requestURL = request.url;
     const searchParams = new URL(requestURL).searchParams
 
