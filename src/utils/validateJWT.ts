@@ -9,7 +9,8 @@ export default ({ token }: {
     return ({
       ok: true,
       err: undefined,
-      valid: true
+      valid: true,
+      decoded
     })
 
   } catch (err) {

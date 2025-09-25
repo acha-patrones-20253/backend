@@ -35,8 +35,9 @@ export const google = new Elysia({
 
     const ticketHolderName = user.data[0].full_name
 
+    const ticket_id = randomUUIDv7()
     const value = {
-      key: `${user_id}-${randomUUIDv7()}`
+      key: `${user_id}-${ticket_id}`
     }
 
     const ticket_token = jwt.sign(value, import.meta.env.TICKETS_KEY_JWT!)
@@ -65,7 +66,7 @@ export const google = new Elysia({
 
     const link = "https://pay.google.com/gp/v/save/" + token;
 
-    return new Response(JSON.stringify({ link, ticket_token }), {
+    return new Response(JSON.stringify({ link, ticket_token, value, }), {
       status: 200,
       headers: {
         "Content-Type": "application/json"

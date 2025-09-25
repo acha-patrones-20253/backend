@@ -1,4 +1,4 @@
-import Elysia, { redirect } from "elysia";
+import Elysia from "elysia";
 
 export const supabase = new Elysia({
   prefix: '/supabase'
