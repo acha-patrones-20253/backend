@@ -2,11 +2,12 @@ import { randomUUIDv7 } from "bun";
 import Elysia from "elysia";
 import getServiceAccount from "../utils/getServiceAccount";
 import jwt from 'jsonwebtoken'
+import supabaseClient from "../lib/supabaseClient";
 
 export const google = new Elysia({
   prefix: '/google'
 })
-  .get("qr-code", ({ request }) => {
+  .get("qr-code", async ({ request }) => {
     const serviceAccount = getServiceAccount()
 
     const requestURL = request.url;
@@ -14,16 +15,31 @@ export const google = new Elysia({
 
     const user_id = searchParams.get("user_id")
 
-    if(!user_id) {
+    if (!user_id) {
       return new Response("Invalid request", {
         status: 400
       })
     }
 
-    // TODO: GET User Name
-    const ticketHolderName = "Miguel Vargas"
+    let user;
 
-    const value = `${user_id}-${randomUUIDv7()}`
+    try {
+      user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
+
+      if (!user || !user.data || !user.data[0] || user.error) throw new Error("User not found - !user = true")
+    } catch (err) {
+      return new Response("Invalid request", {
+        status: 400
+      })
+    }
+
+    const ticketHolderName = user.data[0].full_name
+
+    const value = {
+      key: `${user_id}-${randomUUIDv7()}`
+    }
+
+    const ticket_token = jwt.sign(value, import.meta.env.TICKETS_KEY_JWT!)
 
     const payload = {
       iss: serviceAccount.client_email,
@@ -37,7 +53,7 @@ export const google = new Elysia({
             state: "ACTIVE",
             barcode: {
               type: 'qrCode',
-              value
+              value: ticket_token
             },
             ticketHolderName
           }
@@ -49,8 +65,7 @@ export const google = new Elysia({
 
     const link = "https://pay.google.com/gp/v/save/" + token;
 
-
-    return new Response(JSON.stringify({link}), {
+    return new Response(JSON.stringify({ link, ticket_token }), {
       status: 200,
       headers: {
         "Content-Type": "application/json"
