@@ -4,6 +4,7 @@ import genJWT from "./src/utils/genJWT";
 import validateJWT from "./src/utils/validateJWT";
 import { supabase } from "./src/supabase/handlers";
 import { google } from "./src/google/handlers";
+import { auth } from "./src/auth/controllers";
 
 program
   .name('Unlocked Backend Server')
@@ -45,12 +46,10 @@ if (serve) {
         })
       }
     })
-    .use(
-      supabase
-    )
-    .use(
-      google
-    )
+    .use(supabase)
+    .use(google)
+    .use(auth)
+
   app.on('start', () => {
     console.log(`Elysia Listening Port = ${import.meta.env.PORT}`)
   })
