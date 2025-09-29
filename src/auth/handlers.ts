@@ -1,7 +1,9 @@
 import type { Context } from "elysia";
 import zUserCreator from "../schemas/zUserCreator";
 import supabaseClient from "../lib/supabaseClient";
-import { hashSync } from "bcrypt";
+import { compareSync, hashSync } from "bcrypt";
+import zUserLogin from "../schemas/zUserLogin";
+import { sign } from "jsonwebtoken";
 
 const register = async (context: Context) => {
   const { body } = context
@@ -62,4 +64,60 @@ const register = async (context: Context) => {
   )
 }
 
-export { register }
+const login = async (context: Context) => {
+  const { body } = context
+
+  let parseBody = zUserLogin.safeParse(body)
+
+  if (parseBody.error) {
+    console.log("Error auth/login")
+    return new Response(`Invalid query\n${parseBody.error.message}`, {
+      status: 400
+    })
+  }
+
+  let { username, password } = parseBody.data;
+
+  const user = await supabaseClient.from("users").select("username,password_hash,email").eq("username", username)
+
+  if (user.error) {
+    return new Response("Internal Server Error", {
+      status: 500
+    })
+  }
+  
+  if (!user.data || user.data.length == 0 || !Boolean(user.data.at(0)?.password_hash)) {
+    return new Response("Cannot LogIn", {
+      status: 401
+    })
+  }
+
+
+  const passwordIsCorrect = compareSync(password, user.data.at(0)?.password_hash!)
+
+  if (!passwordIsCorrect) {
+    return new Response("Cannot LogIn", {
+      status: 401
+    })
+  }
+
+  const payload = {
+    token: sign({
+      username,
+      email: user.data?.at(0)?.email!
+    }, import.meta.env.AUTH_JWT!, {
+      expiresIn: '1w'
+    }),
+    username,
+    email: user.data?.at(0)?.email!
+  }
+
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+
+}
+
+export { register, login }
