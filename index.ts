@@ -34,18 +34,6 @@ if (generatejwt) {
 if (serve) {
 
   const app = new Elysia()
-    .onBeforeHandle(({ headers }) => {
-      const token = (headers['Authorization'] ?? headers["authorization"])?.split(" ")?.at(-1)
-
-      try {
-        if (!token) throw new Error("No token provided")
-        validateJWT({ token })
-      } catch (err) {
-        return new Response("Invalid Credentials", {
-          status: 401
-        })
-      }
-    })
     .use(supabase)
     .use(google)
     .use(auth)
