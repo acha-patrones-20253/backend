@@ -3,6 +3,7 @@ import Elysia from "elysia";
 import getServiceAccount from "../utils/getServiceAccount";
 import jwt from 'jsonwebtoken'
 import supabaseClient from "../lib/supabaseClient";
+import AdminAuthMidd from "../middleware/AdminAuthMidd";
 
 export const google = new Elysia({
   prefix: '/google'
@@ -72,4 +73,6 @@ export const google = new Elysia({
         "Content-Type": "application/json"
       }
     })
+  }, {
+    beforeHandle: AdminAuthMidd
   })

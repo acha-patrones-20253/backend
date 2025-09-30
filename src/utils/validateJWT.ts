@@ -1,10 +1,11 @@
 import jwt from "jsonwebtoken"
 
-export default ({ token }: {
-  token: string
+export default ({ token, key = "ADMIN_AUTH_JWT" }: {
+  token: string,
+  key?: string
 }) => {
   try {
-    const decoded = jwt.verify(token, import.meta.env.JWT_KEY!);
+    const decoded = jwt.verify(token, import.meta.env[key]!);
 
     return ({
       ok: true,

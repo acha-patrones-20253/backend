@@ -6,7 +6,7 @@ export default () => {
   };
 
   const token = jwt.sign(payload,
-    import.meta.env.JWT_KEY!
+    import.meta.env.ADMIN_AUTH_JWT!
   );
 
   return ({ token })
