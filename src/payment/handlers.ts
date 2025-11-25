@@ -2,6 +2,8 @@ import type { Context } from "elysia";
 import supabaseClient from "../lib/supabaseClient";
 import type { AuthUser } from "../types/auth.types";
 import { z } from "zod";
+import generateTicketToken from "../utils/generateTicketToken";
+import generateGoogleWalletLink from "../utils/generateGoogleWalletLink";
 
 // 1. Definimos el esquema de validación para el body de la compra
 // Esto debería ir en tu archivo de schemas compartidos, pero lo pongo aquí para referencia
@@ -26,8 +28,6 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
   }
 
 
-  console.log(user)
-
   const { event_id, tickets_quantity, accommodations } = parseBody.data;
 
   const ticketsToInsert = Array.from({ length: tickets_quantity }).map(() => ({
@@ -45,6 +45,28 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
     return new Response("Error processing tickets", { status: 500 });
   }
 
+  for (const ticket of createdTickets) {
+    console.log("Created ticket ID:", ticket.event_access_id);
+
+    const ticket_token = generateTicketToken({
+      event_access_id: ticket.event_access_id,
+      user_id: user.user_id
+    })
+
+    const google_link = generateGoogleWalletLink({
+      ticket_token,
+      id: ticket.event_access_id,
+      ticketHolderName: user.username
+    })
+
+    await supabaseClient.from("event_access")
+      .update({
+        ticket: ticket_token,
+        wallet_link: google_link
+      })
+      .eq("event_access_id", ticket.event_access_id);
+  }
+
   if (accommodations && accommodations.length > 0) {
     const lodgingsToInsert = accommodations.flatMap((acc) => {
       return Array.from({ length: acc.quantity }).map(() => ({
@@ -55,9 +77,32 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
       }));
     });
 
+
     const { error: lodgingError } = await supabaseClient
       .from("lodging_access")
       .insert(lodgingsToInsert);
+
+    for (const lodging of lodgingsToInsert) {
+      console.log("Created ticket ID:", lodging.accomodation_id);
+
+      const ticket_token = generateTicketToken({
+        lodging_access_id: lodging.accomodation_id,
+        user_id: user.user_id
+      })
+
+      const google_link = generateGoogleWalletLink({
+        ticket_token,
+        id: lodging.accomodation_id,
+        ticketHolderName: user.username
+      })
+
+      await supabaseClient.from("lodging_access")
+        .update({
+          ticket: ticket_token,
+          wallet_link: google_link
+        })
+        .eq("accomodation_id", lodging.accomodation_id);
+    }
 
     if (lodgingError) {
       console.error("Error creating lodging:", lodgingError);
