@@ -1,5 +1,5 @@
 import Elysia from "elysia";
-import { changePassword, login, register, sendRecoverMail } from './handlers.ts'
+import { changePassword, getUser, login, register, sendRecoverMail } from './handlers.ts'
 import UserAuthMidd from "../middleware/UserAuthMidd.ts";
 
 export const auth = new Elysia({
@@ -8,6 +8,9 @@ export const auth = new Elysia({
   .post("register", register)
   .post("login", login)
   .get("recover", sendRecoverMail)
+  .get("me", getUser, {
+    beforeHandle: UserAuthMidd
+  })
   .post("change-pass", changePassword, {
     beforeHandle: UserAuthMidd
   })
