@@ -23,21 +23,33 @@ export const google = new Elysia({
     }
 
     let user;
+    let ticket;
 
     try {
       user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
 
       if (!user || !user.data || !user.data[0] || user.error) throw new Error("User not found - !user = true")
+
+        ticket = await supabaseClient
+        .from("event_access") 
+        .select("event_access_id, event_id")
+        .eq("client_id", user_id)
+        .maybeSingle();
+
+        if (!ticket.data) throw new Error("User has no tickets");
+
     } catch (err) {
-      return new Response("Invalid request", {
+      return new Response("Invalid request or User/Ticket not found", {
         status: 400
       })
     }
 
     const ticketHolderName = user.data[0].full_name
 
-    const ticket_id = randomUUIDv7()
+    const ticket_id = ticket.data.event_access_id;
     const value = {
+      event_access_id: ticket_id,
+      user_id: user_id,
       key: `${user_id}-${ticket_id}`
     }
 
@@ -50,7 +62,7 @@ export const google = new Elysia({
       payload: {
         eventTicketObjects: [
           {
-            id: `${import.meta.env['google-issuer-id']}.${randomUUIDv7()}`,
+            id: `${import.meta.env['google-issuer-id']}.${ticket_id}`,
             classId: `${import.meta.env['google-issuer-id']}.demo_class1`,
             state: "ACTIVE",
             barcode: {

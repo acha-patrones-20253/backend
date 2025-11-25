@@ -15,6 +15,7 @@ export const supabase = new Elysia({
       method: request.method,
       headers: {
         ...request.headers,
+        "Accept-Encoding": "identity",
         'apiKey': import.meta.env.SUPABASE_TOKEN!,
         'Authorization': `Bearer ${import.meta.env.SUPABASE_TOKEN!}`
       },
