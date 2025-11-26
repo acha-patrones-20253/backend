@@ -11,6 +11,7 @@ const register = async (context: Context) => {
 
   const schema = z.object({
     username: z.string().min(3).max(30),
+    full_name: z.string().min(3).max(100),
     password: z.string().min(4).max(100),
     email: z.email().max(100),
     organizer_id: z.string(),
@@ -25,7 +26,7 @@ const register = async (context: Context) => {
     })
   }
 
-  let { username, organizer_id, password, email } = parseBody.data;
+  let { username, organizer_id, password, email, full_name } = parseBody.data;
 
   const oldUser = await supabaseClient.from("admin").select("*").or(`email.eq.${email},username.eq.${username}`)
 
@@ -48,6 +49,7 @@ const register = async (context: Context) => {
     email,
     password_hash,
     organizer_id,
+    full_name
   }]).select()
 
   if (createQuery.error) {
