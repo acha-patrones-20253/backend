@@ -61,6 +61,7 @@ const register = async (context: Context) => {
       username,
       email: user.data?.at(0)?.email!,
       user_id: user.data?.at(0)?.user_id!,
+      admin: false
     }, import.meta.env.USER_AUTH_JWT!, {
       expiresIn: '1w'
     }),
@@ -119,6 +120,7 @@ const login = async (context: Context) => {
       username,
       email: user.data?.at(0)?.email!,
       user_id: user.data?.at(0)?.user_id!,
+      admin: false
     }, import.meta.env.USER_AUTH_JWT!, {
       expiresIn: '1w'
     }),
@@ -156,7 +158,8 @@ const sendRecoverMail = async (context: Context) => {
 
   const token = sign({
     username,
-    email
+    email,
+    admin: false
   }, import.meta.env.USER_AUTH_JWT!, {
     expiresIn: '1h'
   })

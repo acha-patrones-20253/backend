@@ -11,7 +11,7 @@ const register = async (context: Context) => {
 
   const schema = z.object({
     username: z.string().min(3).max(30),
-    password: z.string().min(6).max(100),
+    password: z.string().min(4).max(100),
     email: z.email().max(100),
     organizer_id: z.string(),
   })
@@ -63,6 +63,7 @@ const register = async (context: Context) => {
       username,
       email: user.data?.at(0)?.email!,
       user_id: user.data?.at(0)?.user_id!,
+      admin: true
     }, import.meta.env.USER_AUTH_JWT!, {
       expiresIn: '1w'
     }),
@@ -121,6 +122,7 @@ const login = async (context: Context) => {
       username,
       email: user.data?.at(0)?.email!,
       user_id: user.data?.at(0)?.user_id!,
+      admin: true
     }, import.meta.env.USER_AUTH_JWT!, {
       expiresIn: '1w'
     }),
@@ -152,4 +154,62 @@ const getUser = async (context: Context & {
 
 }
 
-export { register, login, getUser }
+const createOrganizer = async (context: Context) => {
+  const { body } = context
+
+  const schema = z.object({
+    username: z.string().min(3).max(100),
+    email: z.email().max(100),
+    organization_name: z.string().min(3).max(100),
+    password: z.string().min(4).max(100),
+  })
+
+  let parseBody = schema.safeParse(body)
+
+  if (parseBody.error) {
+    console.log("Error auth/register")
+    return new Response(`Invalid query\n${parseBody.error.message}`, {
+      status: 400
+    })
+  }
+
+  let { username, organization_name, email, password } = parseBody.data;
+
+  const password_hash = hashSync(password, 10)
+
+  const oldOrganizer = await supabaseClient.from("organizer").select("*").or(`email.eq.${email},organization_name.eq.${organization_name}`)
+  if (oldOrganizer.error) {
+    return new Response("Internal Server Error", {
+      status: 500
+    })
+  }
+
+  if (oldOrganizer.data.length > 0) {
+    return new Response("This organizer already exists", {
+      status: 400
+    })
+  }
+
+  const createQuery = await supabaseClient.from("organizer").insert([{
+    username,
+    email,
+    organization_name,
+    password_hash,
+  }]).select()
+
+  if (createQuery.error) {
+    return new Response("Internal Server Error, cannot create organizer", {
+      status: 500
+    })
+  }
+
+  const organizer = createQuery.data?.at(0)
+
+  return new Response(JSON.stringify(organizer), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+}
+
+export { register, login, getUser, createOrganizer }
