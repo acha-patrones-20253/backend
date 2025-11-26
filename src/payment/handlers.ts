@@ -5,6 +5,7 @@ import { z } from "zod";
 import generateTicketToken from "../utils/generateTicketToken";
 import { GoogleWalletAdapter } from "../utils/walletLink/adapters/GoogleWalletAdapter";
 import type WalletLinkAdapter from "../utils/walletLink/WalletLinkAdapter";
+import { sendEmail } from "../lib/resendClient";
 
 
 const PurchaseSchema = z.object({
@@ -140,6 +141,28 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
     console.error("Error registering payment:", paymentError);
     return new Response("Error registering payment", { status: 500 });
   }
+
+  sendEmail({
+    to: [user.email],
+    subject: "Confirmación de compra y siguientes pasos",
+    html: `
+    <p>Hola <strong>${user.username}</strong>,</p>
+    
+    <p>¡Gracias por tu compra! Confirmamos que has adquirido exitosamente <strong>${tickets_quantity} entrada(s)</strong> para el evento.</p>
+    
+    <p>Para completar tu experiencia, es necesario que realices lo siguiente:</p>
+    
+    <ol>
+      <li><strong>Confirma tu registro:</strong> Revisa los detalles en tu perfil.</li>
+      <li><strong>Entra a la App:</strong> Tus entradas digitales solo estarán disponibles a través de nuestra web.</li>
+    </ol>
+
+    <p>¡Nos vemos pronto!</p>
+    <p>Atentamente,<br/>El equipo del evento</p>
+  `
+  }).catch((err) => {
+    console.error("Error al enviar el correo de confirmación:", err);
+  });
 
   return new Response(JSON.stringify({
     message: "Purchase successful",
