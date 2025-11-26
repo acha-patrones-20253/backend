@@ -7,6 +7,9 @@ import { auth } from "./src/auth/controllers";
 import { cors } from "@elysiajs/cors"
 import { payment } from "./src/payment/controllers";
 import { admin_auth } from "./src/admin-auth/controllers";
+import { events } from "./src/events/controllers";
+import { locations } from "./src/locations/controllers";
+import { accomodations } from "./src/accomodations/controllers";
 
 program
   .name('Unlocked Backend Server')
@@ -41,6 +44,9 @@ if (serve) {
     .use(auth)
     .use(payment)
     .use(admin_auth)
+    .use(events)
+    .use(locations)
+    .use(accomodations)
     .use(
       cors({
         origin: "*",
