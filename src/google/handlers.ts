@@ -23,37 +23,52 @@ export const google = new Elysia({
     }
 
     let user;
-    let ticket;
+    let eventTicket;
+    let lodgingTicket;
 
     try {
       user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
 
       if (!user || !user.data || !user.data[0] || user.error) throw new Error("User not found - !user = true")
 
-        ticket = await supabaseClient
+        const eventQuery = await supabaseClient
         .from("event_access") 
-        .select("event_access_id, event_id")
+        .select("event_access_id")
         .eq("client_id", user_id)
-        .maybeSingle();
+        .maybeSingle(); // Puede ser null si no compró evento
 
-        if (!ticket.data) throw new Error("User has no tickets");
+      eventTicket = eventQuery.data;
+
+      const lodgingQuery = await supabaseClient
+        .from("lodging_access") 
+        .select("lodging_access_id")
+        .eq("client_id", user_id)
+        .maybeSingle(); // Puede ser null si no reservó hotel
+
+      lodgingTicket = lodgingQuery.data;
+
+        if (!eventTicket && !lodgingTicket) {
+        throw new Error("User has no active tickets (Event or Lodging)");
+      }
 
     } catch (err) {
-      return new Response("Invalid request or User/Ticket not found", {
+      return new Response("Invalid request or User/Ticket(s) not found", {
         status: 400
       })
     }
 
     const ticketHolderName = user.data[0].full_name
 
-    const ticket_id = ticket.data.event_access_id;
     const value = {
-      event_access_id: ticket_id,
+      event_access_id: eventTicket?.event_access_id || null,     // Llave del Evento
+      lodging_access_id: lodgingTicket?.lodging_access_id || null, // Llave del Hotel
       user_id: user_id,
-      key: `${user_id}-${ticket_id}`
+      timestamp: Date.now()
     }
 
     const ticket_token = jwt.sign(value, import.meta.env.TICKETS_KEY_JWT!)
+
+    const mainTicketId = randomUUIDv7();
 
     const payload = {
       iss: serviceAccount.client_email,
@@ -62,7 +77,7 @@ export const google = new Elysia({
       payload: {
         eventTicketObjects: [
           {
-            id: `${import.meta.env['google-issuer-id']}.${ticket_id}`,
+            id: `${import.meta.env['google-issuer-id']}.${mainTicketId}`,
             classId: `${import.meta.env['google-issuer-id']}.demo_class1`,
             state: "ACTIVE",
             barcode: {
