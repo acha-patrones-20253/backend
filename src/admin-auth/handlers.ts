@@ -128,7 +128,8 @@ const login = async (context: Context) => {
         username,
         email: organizer.data?.at(0)?.email!,
         organizer_id: organizer.data?.at(0)?.organizer_id!,
-        admin: true
+        admin: true,
+        user_id: organizer.data?.at(0)?.organizer_id!
       }, import.meta.env.USER_AUTH_JWT!, {
         expiresIn: '1w'
       }),
@@ -184,11 +185,15 @@ const getUser = async (context: Context & {
   user: AuthUser
 }) => {
 
-  const { user_id } = context.user;
+  const { user_id, organizer_id } = context.user;
 
-  const user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
+  const admin = (
+    context.user.organizer_id ?
+      await supabaseClient.from("organizer").select("*").eq("organizer_id", organizer_id!) :
+      await supabaseClient.from("admin").select("*").eq("user_id", user_id)
+  )
 
-  return new Response(JSON.stringify(user?.data![0]), {
+  return new Response(JSON.stringify(admin?.data![0]), {
     headers: {
       "Content-Type": "application/json"
     }
