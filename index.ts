@@ -6,6 +6,7 @@ import { google } from "./src/google/handlers";
 import { auth } from "./src/auth/controllers";
 import { cors } from "@elysiajs/cors"
 import { payment } from "./src/payment/controllers";
+import { admin_auth } from "./src/admin-auth/controllers";
 
 program
   .name('Unlocked Backend Server')
@@ -39,6 +40,7 @@ if (serve) {
     .use(google)
     .use(auth)
     .use(payment)
+    .use(admin_auth)
     .use(
       cors({
         origin: "*",

@@ -2,7 +2,7 @@ import Elysia from "elysia";
 import { getUser, login, register } from './handlers.ts'
 import UserAuthMidd from "../middleware/UserAuthMidd.ts";
 
-export const auth = new Elysia({
+export const admin_auth = new Elysia({
   prefix: '/admin/auth'
 })
   .post("login", login)
