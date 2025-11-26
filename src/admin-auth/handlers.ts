@@ -187,17 +187,29 @@ const getUser = async (context: Context & {
 
   const { user_id, organizer_id } = context.user;
 
-  const admin = (
-    context.user.organizer_id ?
-      await supabaseClient.from("organizer").select("*").eq("organizer_id", organizer_id!) :
-      await supabaseClient.from("admin").select("*").eq("user_id", user_id)
-  )
+  try {
+    let admin = (
+      context.user.organizer_id ?
+        await supabaseClient.from("organizer").select("*").eq("organizer_id", organizer_id!) :
+        await supabaseClient.from("admin").select("*,organizer(organizer_id,organization_name)").eq("user_id", user_id)
+    )
 
-  return new Response(JSON.stringify(admin?.data![0]), {
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
+    return new Response(JSON.stringify({
+      ...admin?.data![0],
+      is_organizer: context.user.organizer_id ? true : false,
+      admin: true
+    }), {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+  } catch (err) {
+    console.log(err)
+    return new Response("Internal Server Error", {
+      status: 500
+    })
+  }
+
 
 }
 
