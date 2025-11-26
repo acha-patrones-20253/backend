@@ -111,7 +111,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
           ticket: ticket_token,
           wallet_link: google_link
         })
-        .eq("accomodation_id", lodging.accomodation_id);
+        .eq("loding_access_id", lodging.lodging_access_id);
     }
   }
 
