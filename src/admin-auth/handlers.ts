@@ -68,7 +68,8 @@ const register = async (context: Context) => {
       expiresIn: '1w'
     }),
     username,
-    email: user.data?.at(0)?.email!
+    email: user.data?.at(0)?.email!,
+    admin: true
   }
 
   return new Response(JSON.stringify(payload), {
@@ -93,17 +94,54 @@ const login = async (context: Context) => {
   let { email, password } = parseBody.data;
 
   const user = await supabaseClient.from("admin").select("*").eq("email", email)
+  const organizer = await supabaseClient.from("organizer").select("*").eq("email", email)
 
-  if (user.error) {
+  if (user.error || organizer.error) {
     return new Response("Internal Server Error", {
       status: 500
     })
   }
 
   if (!user.data || user.data.length == 0 || !Boolean(user.data.at(0)?.password_hash)) {
-    return new Response("Cannot LogIn", {
-      status: 401
+
+    if (!organizer.data || organizer.data.length == 0 || !Boolean(organizer.data.at(0)?.password_hash)) {
+
+      return new Response("Cannot LogIn", {
+        status: 401
+      })
+
+    }
+
+    const passwordIsCorrect = compareSync(password, organizer.data.at(0)?.password_hash!)
+
+    if (!passwordIsCorrect) {
+      return new Response("Cannot LogIn", {
+        status: 401
+      })
+    }
+
+    const username = organizer.data.at(0)?.username
+    const payload = {
+      token: sign({
+        username,
+        email: organizer.data?.at(0)?.email!,
+        organizer_id: organizer.data?.at(0)?.organizer_id!,
+        admin: true
+      }, import.meta.env.USER_AUTH_JWT!, {
+        expiresIn: '1w'
+      }),
+      username,
+      email: organizer.data?.at(0)?.email!,
+      organizer: true,
+      admin: true
+    }
+
+    return new Response(JSON.stringify(payload), {
+      headers: {
+        "Content-Type": "application/json"
+      }
     })
+
   }
 
 
@@ -127,7 +165,8 @@ const login = async (context: Context) => {
       expiresIn: '1w'
     }),
     username,
-    email: user.data?.at(0)?.email!
+    email: user.data?.at(0)?.email!,
+    admin: true
   }
 
   return new Response(JSON.stringify(payload), {

@@ -66,7 +66,8 @@ const register = async (context: Context) => {
       expiresIn: '1w'
     }),
     username,
-    email: user.data?.at(0)?.email!
+    email: user.data?.at(0)?.email!,
+    admin: false
   }
 
   return new Response(JSON.stringify(payload), {
@@ -125,7 +126,8 @@ const login = async (context: Context) => {
       expiresIn: '1w'
     }),
     username,
-    email: user.data?.at(0)?.email!
+    email: user.data?.at(0)?.email!,
+    admin: false
   }
 
   return new Response(JSON.stringify(payload), {
