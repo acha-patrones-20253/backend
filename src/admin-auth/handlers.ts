@@ -133,7 +133,8 @@ const login = async (context: Context) => {
       username,
       email: organizer.data?.at(0)?.email!,
       organizer: true,
-      admin: true
+      admin: true,
+      organizer_id: organizer.data?.at(0)?.organizer_id!
     }
 
     return new Response(JSON.stringify(payload), {
