@@ -1,0 +1,155 @@
+import type { Context } from "elysia";
+import supabaseClient from "../lib/supabaseClient";
+import { compareSync, hashSync } from "bcrypt";
+import { sign } from "jsonwebtoken";
+import type { AuthUser } from "../types/auth.types";
+import { SchemaUserLogIn } from "@acha/pdsoft/schemas";
+import z from "zod";
+
+const register = async (context: Context) => {
+  const { body } = context
+
+  const schema = z.object({
+    username: z.string().min(3).max(30),
+    password: z.string().min(6).max(100),
+    email: z.email().max(100),
+    organizer_id: z.string(),
+  })
+
+  let parseBody = schema.safeParse(body)
+
+  if (parseBody.error) {
+    console.log("Error auth/register")
+    return new Response(`Invalid query\n${parseBody.error.message}`, {
+      status: 400
+    })
+  }
+
+  let { username, organizer_id, password, email } = parseBody.data;
+
+  const oldUser = await supabaseClient.from("admin").select("*").or(`email.eq.${email},username.eq.${username}`)
+
+  if (oldUser.error) {
+    return new Response("Internal Server Error", {
+      status: 500
+    })
+  }
+
+  if (oldUser.data.length > 0) {
+    return new Response("This user already exists", {
+      status: 400
+    })
+  }
+
+  const password_hash = hashSync(password, 10)
+
+  const createQuery = await supabaseClient.from("admin").insert([{
+    username,
+    email,
+    password_hash,
+    organizer_id,
+  }]).select()
+
+  if (createQuery.error) {
+    return new Response("Internal Server Error, cannot create user", {
+      status: 500
+    })
+  }
+
+  const user = createQuery
+
+  const payload = {
+    token: sign({
+      username,
+      email: user.data?.at(0)?.email!,
+      user_id: user.data?.at(0)?.user_id!,
+    }, import.meta.env.USER_AUTH_JWT!, {
+      expiresIn: '1w'
+    }),
+    username,
+    email: user.data?.at(0)?.email!
+  }
+
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+}
+
+const login = async (context: Context) => {
+  const { body } = context
+
+  let parseBody = SchemaUserLogIn.schema.safeParse(body)
+
+  if (parseBody.error) {
+    console.log("Error auth/login")
+    return new Response(`Invalid query\n${parseBody.error.message}`, {
+      status: 400
+    })
+  }
+
+  let { email, password } = parseBody.data;
+
+  const user = await supabaseClient.from("admin").select("*").eq("email", email)
+
+  if (user.error) {
+    return new Response("Internal Server Error", {
+      status: 500
+    })
+  }
+
+  if (!user.data || user.data.length == 0 || !Boolean(user.data.at(0)?.password_hash)) {
+    return new Response("Cannot LogIn", {
+      status: 401
+    })
+  }
+
+
+  const passwordIsCorrect = compareSync(password, user.data.at(0)?.password_hash!)
+
+  if (!passwordIsCorrect) {
+    return new Response("Cannot LogIn", {
+      status: 401
+    })
+  }
+
+  const username = user.data.at(0)?.usename
+
+  const payload = {
+    token: sign({
+      username,
+      email: user.data?.at(0)?.email!,
+      user_id: user.data?.at(0)?.user_id!,
+    }, import.meta.env.USER_AUTH_JWT!, {
+      expiresIn: '1w'
+    }),
+    username,
+    email: user.data?.at(0)?.email!
+  }
+
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+
+}
+
+const getUser = async (context: Context & {
+  user: AuthUser
+}) => {
+
+  const { user_id } = context.user;
+
+  const user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
+
+  return new Response(JSON.stringify(user?.data![0]), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+
+}
+
+export { register, login, getUser }

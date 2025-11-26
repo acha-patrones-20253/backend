@@ -6,8 +6,6 @@ export default (context: Context) => {
   const { headers } = context
   const token = (headers['Authorization'] ?? headers["authorization"])?.split(" ")?.at(-1)
 
-  console.log(token)
-
   try {
     if (!token) throw new Error("No token provided")
     const { decoded } = validateJWT({ token, key: "USER_AUTH_JWT" })
