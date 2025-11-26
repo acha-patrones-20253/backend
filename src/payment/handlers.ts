@@ -82,21 +82,27 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
     });
 
 
-    const { error: lodgingError } = await supabaseClient
+    const { error: lodgingError, data: lodgingsAdded } = await supabaseClient
       .from("lodging_access")
-      .insert(lodgingsToInsert);
+      .insert(lodgingsToInsert)
+      .select("*")
 
-    for (const lodging of lodgingsToInsert) {
+    if (lodgingError) {
+      console.error("Error creating lodging:", lodgingError);
+      return new Response("Error processing accommodation booking", { status: 500 });
+    }
+
+    for (const lodging of lodgingsAdded) {
       console.log("Created ticket ID:", lodging.accomodation_id);
 
       const ticket_token = generateTicketToken({
-        lodging_access_id: lodging.accomodation_id,
+        lodging_access_id: lodging.lodging_access_id,
         user_id: user.user_id
       })
 
       const google_link = linkGenerator.getWalletLink({
         ticket_token,
-        id: lodging.accomodation_id,
+        id: lodging.lodging_access_id,
         ticketHolderName: user.username
       })
 
@@ -106,11 +112,6 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
           wallet_link: google_link
         })
         .eq("accomodation_id", lodging.accomodation_id);
-    }
-
-    if (lodgingError) {
-      console.error("Error creating lodging:", lodgingError);
-      return new Response("Error processing accommodation booking", { status: 500 });
     }
   }
 
