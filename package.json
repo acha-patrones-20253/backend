@@ -13,6 +13,8 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@acha/pdsoft": "../pdsoft",
+    "@elysiajs/cors": "^1.4.0",
     "@supabase/supabase-js": "^2.57.4",
     "bcrypt": "^6.0.0",
     "commander": "^14.0.1",

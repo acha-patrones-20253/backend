@@ -1,10 +1,12 @@
 import Elysia from "elysia";
 import { program } from "commander";
 import genJWT from "./src/utils/genJWT";
-import validateJWT from "./src/utils/validateJWT";
 import { supabase } from "./src/supabase/handlers";
 import { google } from "./src/google/handlers";
 import { auth } from "./src/auth/controllers";
+import { cors } from "@elysiajs/cors"
+import { payment } from "./src/payment/controllers";
+import { admin_auth } from "./src/admin-auth/controllers";
 
 program
   .name('Unlocked Backend Server')
@@ -37,6 +39,15 @@ if (serve) {
     .use(supabase)
     .use(google)
     .use(auth)
+    .use(payment)
+    .use(admin_auth)
+    .use(
+      cors({
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        credentials: true
+      })
+    )
 
   app.on('start', () => {
     console.log(`Elysia Listening Port = ${import.meta.env.PORT}`)

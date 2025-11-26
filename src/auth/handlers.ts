@@ -1,17 +1,15 @@
 import type { Context } from "elysia";
-import zUserCreator from "../schemas/zUserCreator";
 import supabaseClient from "../lib/supabaseClient";
 import { compareSync, hashSync } from "bcrypt";
-import zUserLogin from "../schemas/zUserLogin";
 import { sign } from "jsonwebtoken";
 import { sendEmail } from "../lib/resendClient";
 import type { AuthUser } from "../types/auth.types";
-import zUserChangePass from "../schemas/zUserChangePass";
+import { SchemaUserChangePass, SchemaUserLogIn, SchemaUserRegister } from "@acha/pdsoft/schemas";
 
 const register = async (context: Context) => {
   const { body } = context
 
-  let parseBody = zUserCreator.safeParse(body)
+  let parseBody = SchemaUserRegister.schema.safeParse(body)
 
   if (parseBody.error) {
     console.log("Error auth/register")
@@ -56,21 +54,33 @@ const register = async (context: Context) => {
     })
   }
 
-  return new Response(
-    JSON.stringify(createQuery.data),
-    {
-      headers: {
-        "Content-Type": "application/json"
-      },
-      status: 200
+  const user = createQuery
+
+  const payload = {
+    token: sign({
+      username,
+      email: user.data?.at(0)?.email!,
+      user_id: user.data?.at(0)?.user_id!,
+      admin: false
+    }, import.meta.env.USER_AUTH_JWT!, {
+      expiresIn: '1w'
+    }),
+    username,
+    email: user.data?.at(0)?.email!,
+    admin: false
+  }
+
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      "Content-Type": "application/json"
     }
-  )
+  })
 }
 
 const login = async (context: Context) => {
   const { body } = context
 
-  let parseBody = zUserLogin.safeParse(body)
+  let parseBody = SchemaUserLogIn.schema.safeParse(body)
 
   if (parseBody.error) {
     console.log("Error auth/login")
@@ -79,9 +89,9 @@ const login = async (context: Context) => {
     })
   }
 
-  let { username, password } = parseBody.data;
+  let { email, password } = parseBody.data;
 
-  const user = await supabaseClient.from("users").select("username,password_hash,email,user_id").eq("username", username)
+  const user = await supabaseClient.from("users").select("email,password_hash,email,user_id,username").eq("email", email)
 
   if (user.error) {
     return new Response("Internal Server Error", {
@@ -104,16 +114,20 @@ const login = async (context: Context) => {
     })
   }
 
+  const username = user.data.at(0)?.username
+
   const payload = {
     token: sign({
       username,
       email: user.data?.at(0)?.email!,
       user_id: user.data?.at(0)?.user_id!,
+      admin: false
     }, import.meta.env.USER_AUTH_JWT!, {
       expiresIn: '1w'
     }),
     username,
-    email: user.data?.at(0)?.email!
+    email: user.data?.at(0)?.email!,
+    admin: false
   }
 
   return new Response(JSON.stringify(payload), {
@@ -146,7 +160,8 @@ const sendRecoverMail = async (context: Context) => {
 
   const token = sign({
     username,
-    email
+    email,
+    admin: false
   }, import.meta.env.USER_AUTH_JWT!, {
     expiresIn: '1h'
   })
@@ -170,7 +185,7 @@ const changePassword = async (context: Context & {
 }) => {
   const { user_id, username, email } = context.user
 
-  const zParse = await zUserChangePass.safeParseAsync(context.body)
+  const zParse = await SchemaUserChangePass.schema.safeParseAsync(context.body)
   if (zParse.error) return new Response("Invalid Query", {
     status: 400
   })
@@ -185,4 +200,20 @@ const changePassword = async (context: Context & {
   return new Response("OK", { status: 200 })
 }
 
-export { register, login, sendRecoverMail, changePassword }
+const getUser = async (context: Context & {
+  user: AuthUser
+}) => {
+
+  const { user_id } = context.user;
+
+  const user = await supabaseClient.from("users").select("*").eq("user_id", user_id)
+
+  return new Response(JSON.stringify(user?.data![0]), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+
+}
+
+export { register, login, sendRecoverMail, changePassword, getUser }
