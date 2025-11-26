@@ -3,20 +3,23 @@ import supabaseClient from "../lib/supabaseClient";
 import type { AuthUser } from "../types/auth.types";
 import { z } from "zod";
 import generateTicketToken from "../utils/generateTicketToken";
-import generateGoogleWalletLink from "../utils/generateGoogleWalletLink";
+import { GoogleWalletAdapter } from "../utils/walletLink/adapters/GoogleWalletAdapter";
+import type WalletLinkAdapter from "../utils/walletLink/WalletLinkAdapter";
 
-// 1. Definimos el esquema de validación para el body de la compra
-// Esto debería ir en tu archivo de schemas compartidos, pero lo pongo aquí para referencia
+
 const PurchaseSchema = z.object({
   event_id: z.string().uuid(),
   tickets_quantity: z.number().min(1),
   accommodations: z.array(z.object({
     accommodation_id: z.string().uuid(),
-    quantity: z.number().min(1) // Aquí quantity representa 'guest_number' o cantidad de reservas
+    quantity: z.number().min(1)
   })).optional()
 });
 
 const createPurchase = async (context: Context & { user: AuthUser }) => {
+
+  const linkGenerator: WalletLinkAdapter = new GoogleWalletAdapter();
+
   const { body, user } = context;
 
   const parseBody = PurchaseSchema.safeParse(body);
@@ -38,7 +41,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
   const { data: createdTickets, error: ticketError } = await supabaseClient
     .from("event_access")
     .insert(ticketsToInsert)
-    .select("event_access_id"); // Necesitamos los IDs generados
+    .select("event_access_id"); // tomamos los ids generados
 
   if (ticketError || !createdTickets || createdTickets.length === 0) {
     console.error("Error creating tickets:", ticketError);
@@ -53,7 +56,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
       user_id: user.user_id
     })
 
-    const google_link = generateGoogleWalletLink({
+    const google_link = linkGenerator.getWalletLink({
       ticket_token,
       id: ticket.event_access_id,
       ticketHolderName: user.username
@@ -90,7 +93,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
         user_id: user.user_id
       })
 
-      const google_link = generateGoogleWalletLink({
+      const google_link = linkGenerator.getWalletLink({
         ticket_token,
         id: lodging.accomodation_id,
         ticketHolderName: user.username
@@ -121,7 +124,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
       client_id: user.user_id,
       event_access_id: ticket.event_access_id,
       amount: amount.data?.basePrice || 0,
-      payment_method: 'CREDIT_CARD', // Hardcoded por ahora, vendría del frontend si hubiese pasarela real
+      payment_method: 'CREDIT_CARD',
       payment_date: new Date().toISOString(),
       status: 'COMPLETED'
     })
