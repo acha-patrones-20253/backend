@@ -95,6 +95,8 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
     for (const lodging of lodgingsAdded) {
       console.log("Created ticket ID:", lodging.accomodation_id);
 
+      console.log(lodging)
+
       const ticket_token = generateTicketToken({
         lodging_access_id: lodging.lodging_access_id,
         user_id: user.user_id
@@ -111,7 +113,7 @@ const createPurchase = async (context: Context & { user: AuthUser }) => {
           ticket: ticket_token,
           wallet_link: google_link
         })
-        .eq("loding_access_id", lodging.lodging_access_id);
+        .eq("lodging_access_id", lodging.lodging_access_id);
     }
   }
 
